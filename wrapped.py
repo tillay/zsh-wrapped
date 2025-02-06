@@ -1,103 +1,104 @@
-import sys
-import os
-import datetime
+import sys, os, datetime, re
 from pathlib import Path
 from collections import Counter
-import re
 
-def getcolor(color_name, bold):
-    colors = [
-        ("black", "\033[30m"), ("dark_red", "\033[31m"), ("green", "\033[32m"),
-        ("dark_yellow", "\033[33m"), ("dark_blue", "\033[34m"), ("purple", "\033[35m"),
-        ("teal", "\033[36m"), ("light_gray", "\033[37m"),
-        ("dark_gray", "\033[90m"), ("red", "\033[91m"), ("lime", "\033[92m"),
-        ("yellow", "\033[93m"), ("blue", "\033[94m"), ("magenta", "\033[95m"),
-        ("cyan", "\033[96m"), ("white", "\033[97m"),
-    ]
-    for name, escape_sequence in colors:
-        if name == color_name:
-            return escape_sequence + ("\033[1m" if bold else "\033[22m")
-    return None
+def getcolor(name, bold):
+    colors = {"black": 30, "dark_red": 31, "green": 32, "dark_yellow": 33, "dark_blue": 34,
+              "purple": 35, "teal": 36, "light_gray": 37, "dark_gray": 90, "red": 91,
+              "lime": 92, "yellow": 93, "blue": 94, "magenta": 95, "cyan": 96, "white": 97}
+    return f"\033[{colors.get(name, 37)}m" + ("\033[1m" if bold else "\033[22m")
 
-HISTORY_FILE = Path(os.path.expanduser("~/.zsh_history"))
-if not HISTORY_FILE.is_file():
+def print_stats(title, data, color1, color2, action):
+    print(f"\n{getcolor('teal', True)}{title}:")
+    for i, (item, count) in enumerate(data, 1):
+        print(f"{getcolor('blue', False)}{i}: {getcolor(color1, False)}{item} {getcolor('blue', False)}{action} {getcolor(color2, True)}{count} {getcolor('blue', False)}times")
+
+def mostargs(command, top_n, color):
+    if command in args_by_cmd:
+        print_stats(f"Top {top_n} {command} arguments", Counter(args_by_cmd[command]).most_common(top_n), color, "lime", "used")
+
+def mostpinged(top_n):
+    filtered_ips = [ip for ip in pinged_ips if ('.' in ip and not re.search(r'\b\d{3}\b', ip))]
+    print_stats(f"Top {top_n} pinged addresses", Counter(filtered_ips).most_common(top_n), "magenta", "lime", "pinged")
+
+HISTORY_FILE = Path.home() / ".zsh_history"
+if not HISTORY_FILE.exists():
     print("No history file found.")
     sys.exit(1)
 
-with open(HISTORY_FILE, 'r', encoding='utf-8', errors='ignore') as hist:
+with HISTORY_FILE.open('r', encoding='utf-8', errors='ignore') as hist:
     lines = hist.readlines()
 
-commands = []
-timestamps = []
-ping_ips = []
-sudo_count = 0
+commands, timestamps, first_words, sudo_count, pinged_ips = [], [], [], 0, []
+args_by_cmd = {}
+
+days_of_week = Counter()
 
 for line in lines:
     parts = line.strip().split(';', 1)
-    if len(parts) == 2:
-        timestamp_part = parts[0].split(':')
-        if len(timestamp_part) > 1:
-            try:
-                timestamp = int(timestamp_part[1])
-                timestamps.append(timestamp)
-                command = parts[1].strip()
-                commands.append(command)
-
-                if command.startswith("ping"):
-                    ping_parts = command.split()
-                    if len(ping_parts) > 1:
-                        ip = ping_parts[1]
-                        if not re.match(r'^\d{3}\.\d+\.\d+\.\d+$', ip):
-                            ping_ips.append(ip)
-
-                if command.startswith("sudo"):
-                    sudo_count += 1
-            except ValueError:
+    if len(parts) == 2 and ':' in parts[0]:
+        try:
+            timestamp = int(parts[0].split(':')[1])
+            timestamps.append(timestamp)
+            command = parts[1].strip()
+            commands.append(command)
+            split_cmd = command.split()
+            if not split_cmd:
                 continue
+            first_word, args = split_cmd[0], " ".join(split_cmd[1:])
+            first_words.append(first_word)
+            if first_word not in args_by_cmd:
+                args_by_cmd[first_word] = []
+            if args:
+                args_by_cmd[first_word].append(args)
+            if first_word == "sudo":
+                sudo_count += 1
+            if first_word == "ping" and len(split_cmd) > 1:
+                pinged_ips.append(split_cmd[1])
+            day_of_week = datetime.datetime.fromtimestamp(timestamp).strftime('%A')
+            days_of_week[day_of_week] += 1
+        except ValueError:
+            continue
 
-first_words = [cmd.split()[0] for cmd in commands]
-
+os.system("clear")
 bin_commands = set(os.listdir('/bin'))
-excluded_commands = {".", "cd", "while", "exit", "history"}
+excluded_commands = {".", "cd", "while", "exit", "history", "exec"}
 misspelled = [cmd for cmd in first_words if cmd not in bin_commands and cmd not in excluded_commands and not cmd.startswith('.')]
 
-most_common_commands = Counter(first_words).most_common(10)
-most_common_misspelled = Counter(misspelled).most_common(10)
-most_common_pinged_ips = Counter(ping_ips).most_common(10)
+print(f"{getcolor('teal', True)}Total commands: {getcolor('lime', True)}{len(commands)}")
 
-total_count = len(commands)
-sudo_percentage = (sudo_count / total_count) * 100 if total_count > 0 else 0
+print_stats("Top 10 used commands", Counter(first_words).most_common(10), "magenta", "lime", "used")
 
-print(f"\n{getcolor('teal', False)}Total commands: {getcolor('lime', True)}{total_count}")
-print(f"\n{getcolor('teal', False)}Top 10 used commands:")
-for i, (command, count) in enumerate(most_common_commands, start=1):
-    print(f"{getcolor('blue', False)}{i}: {getcolor('red', False)}{command} {getcolor('blue', False)}used {getcolor('lime', True)}{count} {getcolor('blue', False)}times")
+print_stats("Top 10 misspelled commands", Counter(misspelled).most_common(20), "red", "lime", "used")
 
-print(f"\n{getcolor('teal', False)}Top 10 misspelled commands:")
-for i, (command, count) in enumerate(most_common_misspelled, start=1):
-    print(f"{getcolor('blue', False)}{i}: {getcolor('red', False)}{command} {getcolor('blue', False)}used {getcolor('lime', True)}{count} {getcolor('blue', False)}times")
+mostargs("git", 5, "yellow")
+mostargs("cd", 5, "red")
+mostargs("rm", 12, "green")
+mostpinged(10)
 
-print(f"\n{getcolor('teal', False)}Top 10 most pinged IPs:")
-for i, (ip, count) in enumerate(most_common_pinged_ips, start=1):
-    print(f"{getcolor('blue', False)}{i}: {getcolor('red', False)}{ip} {getcolor('blue', False)}pinged {getcolor('lime', True)}{count} {getcolor('blue', False)}times")
+print(f"\n{getcolor('teal', True)}Percentage of commands run with sudo: {getcolor('red', False)}{(sudo_count / len(commands) * 100 if commands else 0):.2f}%")
 
-print(f"\n{getcolor('teal', False)}Percentage of commands run with sudo: {getcolor('red', True)}{sudo_percentage:.2f}%")
+if commands:
+    first_command_time = datetime.datetime.fromtimestamp(timestamps[0]).strftime('%H:%M:%S on %m/%d/%y')
+    print(f"\n{getcolor('teal', True)}First command run at {getcolor('yellow', False)}{first_command_time}: {getcolor('magenta', True)}{commands[0]}\n")
 
-if total_count > 0:
-    first_command_time = datetime.datetime.fromtimestamp(timestamps[0]).strftime('%Y-%m-%d %H:%M:%S')
-    print(f"\n{getcolor('teal', False)}First command run at {getcolor('lime', True)}{first_command_time}: {getcolor('red', True)}{commands[0]}")
+    times = [datetime.datetime.fromtimestamp(ts).hour for ts in timestamps]
+    time_ranges = [(22, 4, "night"), (4, 12, "morning"), (12, 22, "afternoon")]
+    total_time_count = len(times)
 
-    night_count = sum(1 for ts in timestamps if datetime.datetime.fromtimestamp(ts).hour in range(22, 24)) + sum(1 for ts in timestamps if datetime.datetime.fromtimestamp(ts).hour in range(0, 4))
-    morning_count = sum(1 for ts in timestamps if datetime.datetime.fromtimestamp(ts).hour in range(4, 12))
-    afternoon_count = sum(1 for ts in timestamps if datetime.datetime.fromtimestamp(ts).hour in range(12, 22))
+    for start, end, label in time_ranges:
+        count = sum(1 for t in times if start <= t < end or (start > end and (t >= start or t < end)))
+        print(f"{getcolor('blue', False)}You run commands in the {label} {getcolor('red', True)}{(count / total_time_count * 100):.2f}%{getcolor('blue', False)} of the time.")
 
-    total_time_count = night_count + morning_count + afternoon_count
+    hourly_counts = Counter(times)
+    print(f"\n{getcolor('teal', True)}Number of commands run at each hour of the day:")
+    for hour in range(12):
+        left_hour, right_hour = hour, hour + 12
+        left_count, right_count = hourly_counts[left_hour], hourly_counts[right_hour]
+        space = " " * (10 - len(str(left_count)))
+        print(f"{getcolor('blue', False)}{left_hour:02d} - {getcolor('lime', False)}{left_count}{space}"
+              f"{getcolor('blue', False)}{right_hour:02d} - {getcolor('lime', False)}{right_count}")
 
-    if total_time_count > 0:
-        night_percentage = (night_count / total_time_count) * 100
-        morning_percentage = (morning_count / total_time_count) * 100
-        afternoon_percentage = (afternoon_count / total_time_count) * 100
-
-        print(f"\n{getcolor('blue', False)}You make commands at night {getcolor('red', True)}{night_percentage:.2f}%{getcolor('blue', False)} of the time.")
-        print(f"You make commands in the morning {getcolor('red', True)}{morning_percentage:.2f}%{getcolor('blue', False)} of the time.")
-        print(f"You make commands in the afternoon {getcolor('red', True)}{afternoon_percentage:.2f}%{getcolor('blue', False)} of the time.")
+    print(f"\n{getcolor('teal', True)}Number of commands run each day:")
+    for day, count in days_of_week.items():
+        print(f"{getcolor('magenta', False)}{day}: {getcolor('dark_blue', False)}{count}")
