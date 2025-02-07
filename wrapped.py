@@ -1,4 +1,4 @@
-from wrapped import *
+from modules import *
 clear()
 printtotal()
 print_stats("Top 10 used commands", Counter(first_words).most_common(10), "magenta", "green", "used")
