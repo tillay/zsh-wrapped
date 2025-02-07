@@ -16,6 +16,16 @@ if not HIST_FILE.exists():
 with HIST_FILE.open('r', encoding='utf-8', errors='ignore') as hist:
     lines = hist.readlines()
 
+# Read the shell configuration file to check for aliases
+SHELL_RC_FILE = Path.home() / (".bashrc" if shell == "bash" else ".zshrc")
+aliases = set()
+if SHELL_RC_FILE.exists():
+    with SHELL_RC_FILE.open('r', encoding='utf-8', errors='ignore') as rc_file:
+        for line in rc_file:
+            if line.strip().startswith("alias"):
+                alias_name = line.strip().split("=")[0].split()[1]
+                aliases.add(alias_name)
+
 commands, first_words, sudo_count, timestamps, days_of_week = [], [], 0, [], Counter()
 args_by_cmd = {}
 
@@ -49,14 +59,24 @@ for line in lines:
     if args:
         args_by_cmd[first_word].append(args)
 
-excluded_commands = {".", "cd", "exit", "history", "exec"}
+excluded_commands = {".", "cd", "exit", "history", "exec", "while"}
+
+# Function to check if a command is an alias in the history file
+def is_alias_in_history(command):
+    for line in lines:
+        if "alias" in line and command in line:
+            return True
+    return False
 
 misspelled = [
     cmd for cmd in first_words
     if shutil.which(cmd) is None
     and cmd not in excluded_commands
     and not cmd.startswith(('.', '/', '~'))
+    and not is_alias_in_history(cmd)
+    and cmd not in aliases
 ]
+
 total_commands = len(first_words)
 
 # Function to get color codes for terminal output
@@ -91,19 +111,15 @@ def percentage(command, color):
     for line in lines:
         line = line.strip()
         if line.startswith(":"):
-            # Handle timestamped lines
             parts = line.split(';', 1)
             if len(parts) > 1:
                 cmd_line = parts[1].strip()
         else:
-            # Handle non-timestamped lines
             cmd_line = line.strip()
-
-        # Check if the command matches
         if cmd_line.startswith(command + " ") or cmd_line == command:
             command_count += 1
 
-    if total_commands > 0:  # Prevent division by zero
+    if total_commands > 0:
         percentage_value = (command_count / total_commands) * 100
         print(f"\n{headercolor}Percentage of commands that are {command}: {getcolor(color, False)}{percentage_value:.2f}%")
 
@@ -146,16 +162,24 @@ def top_pings(top_n, color):
             print_stats(f"Top {top_n} pinged IPs", Counter(filtered_args).most_common(top_n), color, "green", "used")
         else:
             print(f"\n{headercolor}No valid {command} arguments found after filtering.")
-def barchart(color1, color2):
+
+def barchart(color1, color2): #https://en.wikipedia.org/wiki/Block_Elements
     if timestamps:
         hourly_counts = Counter(times)
         max_count = max(hourly_counts.values()) if hourly_counts else 1
-        print(f"\n{headercolor}Number of commands run at each hour of the day (bar chart):")
-        for height in range(round(max_count/24), 0, -1):
+        scalar = max_count/18
+        print(f"\n{headercolor}Number of commands run at each hour of the day (bar chart):\n")
+        for height in range(round(max_count/scalar), 0, -1):
             row = []
             for hour in range(24):
-                if hourly_counts[hour]/24 >= height:
+                if hourly_counts[hour]/scalar >= height:
                     row.append(f"{getcolor(color2, True)}██")
+                elif hourly_counts[hour]/scalar >=height-0.25:
+                    row.append(f"{getcolor(color2, True)}▆▆")
+                elif hourly_counts[hour]/scalar >=height-0.5:
+                    row.append(f"{getcolor(color2, True)}▄▄")
+                elif hourly_counts[hour]/scalar >=height-0.75:
+                    row.append(f"{getcolor(color2, True)}▂▂")
                 else:
                     row.append("  ")
             print(" ".join(row))
@@ -173,11 +197,15 @@ def daychart(color1, color2):
             for day in days:
                 if daily_counts.get(day, 0)/scalar >= height:
                     row.append(f"{getcolor(color2, True)}███████")
+                elif daily_counts.get(day, 0)/scalar >= height-0.25:
+                    row.append(f"{getcolor(color2, True)}▆▆▆▆▆▆▆")
+                elif daily_counts.get(day, 0)/scalar >= height-0.5:
+                    row.append(f"{getcolor(color2, True)}▄▄▄▄▄▄▄")
+                elif daily_counts.get(day, 0)/scalar >= height-0.75:
+                    row.append(f"{getcolor(color2, True)}▂▂▂▂▂▂▂")
                 else:
                     row.append("       ")
             print(" ".join(row))
-
-        # Print the day labels at the bottom
         print(f"{getcolor(color1, False)}" + " ".join(f"  {day[:3]}  " for day in days))
 
 # Function to display the number of commands run on each day of the week
