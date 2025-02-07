@@ -1,4 +1,4 @@
-import sys, os, re, datetime
+import sys, os, re, datetime, shutil
 from pathlib import Path
 from collections import Counter
 
@@ -49,9 +49,14 @@ for line in lines:
     if args:
         args_by_cmd[first_word].append(args)
 
-bin_commands = set(os.listdir('/bin'))
 excluded_commands = {".", "cd", "exit", "history", "exec"}
-misspelled = [cmd for cmd in first_words if cmd not in bin_commands and cmd not in excluded_commands and not cmd.startswith(('.', '/', '~'))]
+
+misspelled = [
+    cmd for cmd in first_words
+    if shutil.which(cmd) is None
+    and cmd not in excluded_commands
+    and not cmd.startswith(('.', '/', '~'))
+]
 total_commands = len(first_words)
 
 # Function to get color codes for terminal output
@@ -155,6 +160,26 @@ def barchart(color1, color2):
                     row.append("  ")
             print(" ".join(row))
         print(f"{getcolor(color1, False)}" + " ".join(f"{hour:02d}" for hour in range(24)))
+
+def daychart(color1, color2):
+    if timestamps:
+        daily_counts = days_of_week
+        max_count = max(daily_counts.values()) if daily_counts else 1
+        scalar = max_count/10
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        print(f"\n{headercolor}Number of commands run on each day (bar chart):\n")
+        for height in range(round(max_count/scalar), 0, -1):
+            row = []
+            for day in days:
+                if daily_counts.get(day, 0)/scalar >= height:
+                    row.append(f"{getcolor(color2, True)}███████")
+                else:
+                    row.append("       ")
+            print(" ".join(row))
+
+        # Print the day labels at the bottom
+        print(f"{getcolor(color1, False)}" + " ".join(f"  {day[:3]}  " for day in days))
+
 # Function to display the number of commands run on each day of the week
 def byweekday(color1, color2):
     if timestamps:
