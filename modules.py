@@ -81,8 +81,9 @@ total_commands = len(first_words)
 
 # Function to get color codes for terminal output
 def getcolor(name, bold):
-    colors = {"black": 30, "red": 31, "green": 32, "yellow": 33, "blue": 34,
-              "magenta": 35, "cyan": 36, "white": 37}
+    colors = {"black": 30, "dark_red": 31, "green": 32, "dark_yellow": 33, "dark_blue": 34,
+              "purple": 35, "teal": 36, "light_gray": 37, "dark_gray": 90, "red": 91,
+              "lime": 92, "yellow": 93, "blue": 94, "magenta": 95, "cyan": 96, "white": 97}
     return f"\033[{colors.get(name, 37)}m" + ("\033[1m" if bold else "\033[22m")
 def setheadercolor(color):
     global headercolor
