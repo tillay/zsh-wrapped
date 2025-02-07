@@ -57,7 +57,7 @@ total_commands = len(first_words)
 # Function to get color codes for terminal output
 def getcolor(name, bold):
     colors = {"black": 30, "red": 31, "green": 32, "yellow": 33, "blue": 34,
-              "magenta": 35, "cyan": 36, "white": 37, "gray": 90}
+              "magenta": 35, "cyan": 36, "white": 37}
     return f"\033[{colors.get(name, 37)}m" + ("\033[1m" if bold else "\033[22m")
 def setheadercolor(color):
     global headercolor
@@ -128,6 +128,42 @@ def hourly(color1, color2):
             print(f"{getcolor(color1, False)}{left_hour:02d} - {getcolor(color2, False)}{left_count}{space}"
                 f"{getcolor(color1, False)}{right_hour:02d} - {getcolor(color2, False)}{right_count}")
 
+def barchart(color1, color2):
+    if timestamps:
+        hourly_counts = Counter(times)
+        print(f"\n{headercolor}Number of commands run at each hour of the day:")
+        for i in len(height):
+            for hour in range(12):
+                height = hourly_counts[hour]
+                # make a bar graph here that goes from the top down where height is a set varaible and all bars scale proportinally. should be same data from hourly but in bar graph format
+
+def top_pings(top_n, color):
+    if "ping" in args_by_cmd and args_by_cmd["ping"]:
+        filtered_args = []
+        for arg in args_by_cmd["ping"]:
+            if re.search(r'\b\d{3}\b', arg):
+                continue
+            if '.' not in arg:
+                continue
+            filtered_args.append(arg)
+        if filtered_args:
+            print_stats(f"Top {top_n} pinged IPs", Counter(filtered_args).most_common(top_n), color, "green", "used")
+        else:
+            print(f"\n{headercolor}No valid {command} arguments found after filtering.")
+def barchart(color1, color2):
+    if timestamps:
+        hourly_counts = Counter(times)
+        max_count = max(hourly_counts.values()) if hourly_counts else 1
+        print(f"\n{headercolor}Number of commands run at each hour of the day (bar chart):")
+        for height in range(round(max_count/24), 0, -1):
+            row = []
+            for hour in range(24):
+                if hourly_counts[hour]/24 >= height:
+                    row.append(f"{getcolor(color2, True)}██")
+                else:
+                    row.append("  ")
+            print(" ".join(row))
+        print(f"{getcolor(color1, False)}" + " ".join(f"{hour:02d}" for hour in range(24)))
 # Function to display the number of commands run on each day of the week
 def byweekday(color1, color2):
     if timestamps:

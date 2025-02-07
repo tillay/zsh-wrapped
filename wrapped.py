@@ -12,5 +12,8 @@ percentage("sudo","red")
 percentage("git","blue")
 firstcommand("green", "magenta")
 byweekday("magenta", "blue")
+top_pings(5, "green")
 hourly("green", "magenta")
+barchart("green", "magenta")
+
 reset()
