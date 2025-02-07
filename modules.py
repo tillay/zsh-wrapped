@@ -78,8 +78,8 @@ def mostargs(command, top_n, color):
 def clear():
     os.system("clear")
 
-def printtotal():
-    print(f"{headercolor}Total commands: {getcolor('green', True)}{total_commands}")
+def printtotal(color):
+    print(f"{headercolor}Total commands: {getcolor(color, False)}{total_commands}")
 
 def percentage(command, color):
     command_count = 0
@@ -112,8 +112,10 @@ def firstcommand(color1, color2):
         print(f"\n{headercolor}First command run at {getcolor(color1, False)}{first_command_time}: {getcolor(color2, False)}{commands[0]}")
     else:
         print(f"\n{headercolor}First command: {getcolor(color2, False)}{commands[0]}")
+
 def reset():
     print(getcolor("white", False))
+
 # Function to display the number of commands run at each hour of the day
 def hourly(color1, color2):
     if timestamps:
