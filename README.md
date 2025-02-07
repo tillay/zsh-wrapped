@@ -1,4 +1,4 @@
-# sh-wrapped
+# zsh-wrapped
 spotify wrapped for nerds
 
 gives various stats about your terminal history. 
