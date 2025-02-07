@@ -48,8 +48,6 @@ for line in lines:
         args_by_cmd[first_word] = []
     if args:
         args_by_cmd[first_word].append(args)
-    if first_word == "sudo":
-        sudo_count += 1
 
 bin_commands = set(os.listdir('/bin'))
 excluded_commands = {".", "cd", "exit", "history", "exec"}
@@ -64,7 +62,7 @@ def getcolor(name, bold):
 def setheadercolor(color):
     global headercolor
     headercolor = getcolor(color, True)
-    
+
 # Function to print statistics (e.g., top commands or arguments used)
 def print_stats(title, data, color1, color2, action):
     if not data:
@@ -83,9 +81,26 @@ def clear():
 def printtotal():
     print(f"{headercolor}Total commands: {getcolor('green', True)}{total_commands}")
 
-# Print percentage of commands run with sudo
-def sudopercent(color):
-    print(f"\n{headercolor}Percentage of commands run with sudo: {getcolor(color, False)}{(sudo_count / total_commands * 100):.2f}%")
+def percentage(command, color):
+    command_count = 0
+    for line in lines:
+        line = line.strip()
+        if line.startswith(":"):
+            # Handle timestamped lines
+            parts = line.split(';', 1)
+            if len(parts) > 1:
+                cmd_line = parts[1].strip()
+        else:
+            # Handle non-timestamped lines
+            cmd_line = line.strip()
+
+        # Check if the command matches
+        if cmd_line.startswith(command + " ") or cmd_line == command:
+            command_count += 1
+
+    if total_commands > 0:  # Prevent division by zero
+        percentage_value = (command_count / total_commands) * 100
+        print(f"\n{headercolor}Percentage of commands that are {command}: {getcolor(color, False)}{percentage_value:.2f}%")
 
 # Convert timestamps to hours and store in 'times' list
 times = [datetime.datetime.fromtimestamp(ts).hour for ts in timestamps]
@@ -95,20 +110,25 @@ def firstcommand(color1, color2):
     if timestamps:
         first_command_time = datetime.datetime.fromtimestamp(timestamps[0]).strftime('%H:%M:%S on %m/%d/%y')
         print(f"\n{headercolor}First command run at {getcolor(color1, False)}{first_command_time}: {getcolor(color2, False)}{commands[0]}")
-
+    else:
+        print(f"\n{headercolor}First command: {getcolor(color2, False)}{commands[0]}")
+def reset():
+    print(getcolor("white", False))
 # Function to display the number of commands run at each hour of the day
 def hourly(color1, color2):
-    hourly_counts = Counter(times)
-    print(f"\n{headercolor}Number of commands run at each hour of the day:")
-    for hour in range(12):
-        left_hour, right_hour = hour, hour + 12
-        left_count, right_count = hourly_counts[left_hour], hourly_counts[right_hour]
-        space = " " * (10 - len(str(left_count)))
-        print(f"{getcolor(color1, False)}{left_hour:02d} - {getcolor(color2, False)}{left_count}{space}"
-            f"{getcolor(color1, False)}{right_hour:02d} - {getcolor(color2, False)}{right_count}")
+    if timestamps:
+        hourly_counts = Counter(times)
+        print(f"\n{headercolor}Number of commands run at each hour of the day:")
+        for hour in range(12):
+            left_hour, right_hour = hour, hour + 12
+            left_count, right_count = hourly_counts[left_hour], hourly_counts[right_hour]
+            space = " " * (10 - len(str(left_count)))
+            print(f"{getcolor(color1, False)}{left_hour:02d} - {getcolor(color2, False)}{left_count}{space}"
+                f"{getcolor(color1, False)}{right_hour:02d} - {getcolor(color2, False)}{right_count}")
 
 # Function to display the number of commands run on each day of the week
 def byweekday(color1, color2):
-    print(f"\n{headercolor}Number of commands run by day:")
-    for day, count in days_of_week.items():
-        print(f"{getcolor(color1, False)}{day}: {getcolor(color2, False)}{count}")
+    if timestamps:
+        print(f"\n{headercolor}Number of commands run by day:")
+        for day, count in days_of_week.items():
+            print(f"{getcolor(color1, False)}{day}: {getcolor(color2, False)}{count}")
