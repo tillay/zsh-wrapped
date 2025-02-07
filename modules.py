@@ -128,15 +128,6 @@ def hourly(color1, color2):
             print(f"{getcolor(color1, False)}{left_hour:02d} - {getcolor(color2, False)}{left_count}{space}"
                 f"{getcolor(color1, False)}{right_hour:02d} - {getcolor(color2, False)}{right_count}")
 
-def barchart(color1, color2):
-    if timestamps:
-        hourly_counts = Counter(times)
-        print(f"\n{headercolor}Number of commands run at each hour of the day:")
-        for i in len(height):
-            for hour in range(12):
-                height = hourly_counts[hour]
-                # make a bar graph here that goes from the top down where height is a set varaible and all bars scale proportinally. should be same data from hourly but in bar graph format
-
 def top_pings(top_n, color):
     if "ping" in args_by_cmd and args_by_cmd["ping"]:
         filtered_args = []
