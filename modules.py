@@ -1,4 +1,4 @@
-import sys, os, re, datetime, subprocess
+import sys, os, re, datetime
 from pathlib import Path
 from collections import Counter
 
@@ -61,7 +61,10 @@ def getcolor(name, bold):
     colors = {"black": 30, "red": 31, "green": 32, "yellow": 33, "blue": 34,
               "magenta": 35, "cyan": 36, "white": 37, "gray": 90}
     return f"\033[{colors.get(name, 37)}m" + ("\033[1m" if bold else "\033[22m")
-
+def setheadercolor(color):
+    global headercolor
+    headercolor = getcolor(color, True)
+    
 # Function to print statistics (e.g., top commands or arguments used)
 def print_stats(title, data, color1, color2, action):
     if not data:
@@ -109,5 +112,3 @@ def byweekday(color1, color2):
     print(f"\n{headercolor}Number of commands run by day:")
     for day, count in days_of_week.items():
         print(f"{getcolor(color1, False)}{day}: {getcolor(color2, False)}{count}")
-
-headercolor = getcolor('yellow', True)
