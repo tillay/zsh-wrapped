@@ -91,6 +91,8 @@ def print_stats(title, data, color1, color2, action):
 def mostargs(command, top_n, color):
     if command in args_by_cmd and args_by_cmd[command]:
         print_stats(f"Top {top_n} {command} arguments", Counter(args_by_cmd[command]).most_common(top_n), color, "green", "used")
+def topcmds(num, color1, color2):
+    print_stats(f"Top {num} used commands", Counter(first_words).most_common(num), color1, color2, "used")
 
 def clear():
     os.system("clear")
