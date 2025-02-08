@@ -1,81 +1,70 @@
-import sys, os, re, datetime, shutil
+import sys, os, datetime, re
 from pathlib import Path
 from collections import Counter
 
 # Get current shell
-parent_pid = os.getppid()
-os.system(f"ps -p {parent_pid} -o comm= > shell")
-with open("shell", "r") as file:
-    shell = file.read().strip()
-os.remove("shell")
+shell = os.popen(f"ps -p {os.getppid()} -o comm=").read().strip()
 
-# Locate the user's history file based on shell type (bash or zsh)
-HIST_FILE = Path.home() / (".bash_history" if shell == "bash" else ".zsh_history")
+# Locate the user's history file based on shell type
+HIST_FILE = Path.home() / (
+    ".bash_history" if shell == "bash"
+    else ".local/share/fish/fish_history" if shell == "fish"
+    else ".zsh_history"
+)
+
 if not HIST_FILE.exists():
     sys.exit("No history file found.")
+
+# Read the history file and store its contents
 with HIST_FILE.open('r', encoding='utf-8', errors='ignore') as hist:
     lines = hist.readlines()
 
-# Read the shell configuration file to check for aliases
-SHELL_RC_FILE = Path.home() / (".bashrc" if shell == "bash" else ".zshrc")
-aliases = set()
-if SHELL_RC_FILE.exists():
-    with SHELL_RC_FILE.open('r', encoding='utf-8', errors='ignore') as rc_file:
-        for line in rc_file:
-            if line.strip().startswith("alias"):
-                alias_name = line.strip().split("=")[0].split()[1]
-                aliases.add(alias_name)
-
-commands, first_words, sudo_count, timestamps, days_of_week = [], [], 0, [], Counter()
+commands, first_words, timestamps, days_of_week = [], [], [], Counter()
 args_by_cmd = {}
 
-# Parse history file and collect useful data
+# Parse history file based on shell type
 for line in lines:
     line = line.strip()
     if not line:
         continue
-    if line.startswith(":"):
-        parts = line.split(';', 1)
-        if len(parts) > 1 and ':' in parts[0]:
-            try:
-                timestamp = int(parts[0].split(':')[1])
-                timestamps.append(timestamp)
-                day_of_week = datetime.datetime.fromtimestamp(timestamp).strftime('%A')
-                days_of_week[day_of_week] += 1
-            except ValueError:
-                continue
-        command = parts[1] if len(parts) > 1 else ""
-    else:
-        command = line
 
-    split_cmd = command.split()
-    if not split_cmd:
+    if shell == "fish":
+        if line.startswith("- cmd:"):
+            cmd = line.split("cmd: ")[1].strip()
+            first_word, *args = cmd.split()
+            args = " ".join(args)
+        elif line.startswith("when:"):
+            timestamp = int(line.split("when: ")[1].strip())
+            timestamps.append(timestamp)
+            days_of_week[datetime.datetime.fromtimestamp(timestamp).strftime('%A')] += 1
+            continue
+        else:
+            continue
+    else:
+        if line.startswith(":"):
+            parts = line.split(';', 1)
+            if len(parts) > 1 and ':' in parts[0]:
+                try:
+                    timestamp = int(parts[0].split(':')[1])
+                    timestamps.append(timestamp)
+                    days_of_week[datetime.datetime.fromtimestamp(timestamp).strftime('%A')] += 1
+                except ValueError:
+                    continue
+            command = parts[1] if len(parts) > 1 else ""
+        else:
+            command = line
+        first_word, *args = command.split()
+        args = " ".join(args)
+
+    if not first_word:
         continue
-    first_word, args = split_cmd[0], " ".join(split_cmd[1:])
+
     first_words.append(first_word)
-    commands.append(command)
+    commands.append(cmd if shell == "fish" else command)
     if first_word not in args_by_cmd:
         args_by_cmd[first_word] = []
     if args:
         args_by_cmd[first_word].append(args)
-
-excluded_commands = {".", "cd", "exit", "history", "exec", "while"}
-
-# Function to check if a command is an alias in the history file
-def is_alias_in_history(command):
-    for line in lines:
-        if "alias" in line and command in line:
-            return True
-    return False
-
-misspelled = [
-    cmd for cmd in first_words
-    if shutil.which(cmd) is None
-    and cmd not in excluded_commands
-    and not cmd.startswith(('.', '/', '~'))
-    and not is_alias_in_history(cmd)
-    and cmd not in aliases
-]
 
 total_commands = len(first_words)
 
@@ -85,6 +74,7 @@ def getcolor(name, bold):
               "purple": 35, "teal": 36, "light_gray": 37, "dark_gray": 90, "red": 91,
               "lime": 92, "yellow": 93, "blue": 94, "magenta": 95, "cyan": 96, "white": 97}
     return f"\033[{colors.get(name, 37)}m" + ("\033[1m" if bold else "\033[22m")
+
 def setheadercolor(color):
     global headercolor
     headercolor = getcolor(color, True)
@@ -95,12 +85,13 @@ def print_stats(title, data, color1, color2, action):
         return
     print(f"\n{headercolor}{title}:")
     for i, (item, count) in enumerate(data, 1):
-        print(f"{getcolor('blue', False)}{i}: {getcolor(color1, False)}{item} {getcolor('blue', False)}{action} {getcolor(color2, True)}{count} times")
+        print(f"{getcolor('blue', False)}{i}: {getcolor(color1, False)}{item} {getcolor('blue', False)}{action} {getcolor(color2, True)}{count} {"times" if count > 1 else "time"}")
 
 # Function to display the most used arguments for a specific command
 def mostargs(command, top_n, color):
     if command in args_by_cmd and args_by_cmd[command]:
         print_stats(f"Top {top_n} {command} arguments", Counter(args_by_cmd[command]).most_common(top_n), color, "green", "used")
+
 def clear():
     os.system("clear")
 
@@ -108,18 +99,7 @@ def printtotal(color):
     print(f"{headercolor}Total commands: {getcolor(color, False)}{total_commands}")
 
 def percentage(command, color):
-    command_count = 0
-    for line in lines:
-        line = line.strip()
-        if line.startswith(":"):
-            parts = line.split(';', 1)
-            if len(parts) > 1:
-                cmd_line = parts[1].strip()
-        else:
-            cmd_line = line.strip()
-        if cmd_line.startswith(command + " ") or cmd_line == command:
-            command_count += 1
-
+    command_count = sum(1 for cmd in commands if cmd.startswith(command + " ") or cmd == command)
     if total_commands > 0:
         percentage_value = (command_count / total_commands) * 100
         print(f"\n{headercolor}Percentage of commands that are {command}: {getcolor(color, False)}{percentage_value:.2f}%")
@@ -152,34 +132,28 @@ def hourly(color1, color2):
 
 def top_pings(top_n, color):
     if "ping" in args_by_cmd and args_by_cmd["ping"]:
-        filtered_args = []
-        for arg in args_by_cmd["ping"]:
-            if re.search(r'\b\d{3}\b', arg):
-                continue
-            if '.' not in arg:
-                continue
-            filtered_args.append(arg)
+        filtered_args = [arg for arg in args_by_cmd["ping"] if re.search(r'\b\d{3}\b', arg) is None and '.' in arg]
         if filtered_args:
             print_stats(f"Top {top_n} pinged IPs", Counter(filtered_args).most_common(top_n), color, "green", "used")
         else:
-            print(f"\n{headercolor}No valid {command} arguments found after filtering.")
+            print(f"\n{headercolor}No valid ping arguments found after filtering.")
 
-def barchart(color1, color2): #https://en.wikipedia.org/wiki/Block_Elements
+def barchart(color1, color2):
     if timestamps:
         hourly_counts = Counter(times)
         max_count = max(hourly_counts.values()) if hourly_counts else 1
-        scalar = max_count/18
+        scalar = max_count / 18
         print(f"\n{headercolor}Number of commands run at each hour of the day (bar chart):\n")
-        for height in range(round(max_count/scalar), 0, -1):
+        for height in range(round(max_count / scalar), 0, -1):
             row = []
             for hour in range(24):
-                if hourly_counts[hour]/scalar >= height:
+                if hourly_counts[hour] / scalar >= height:
                     row.append(f"{getcolor(color2, True)}██")
-                elif hourly_counts[hour]/scalar >=height-0.25:
+                elif hourly_counts[hour] / scalar >= height - 0.25:
                     row.append(f"{getcolor(color2, True)}▆▆")
-                elif hourly_counts[hour]/scalar >=height-0.5:
+                elif hourly_counts[hour] / scalar >= height - 0.5:
                     row.append(f"{getcolor(color2, True)}▄▄")
-                elif hourly_counts[hour]/scalar >=height-0.75:
+                elif hourly_counts[hour] / scalar >= height - 0.75:
                     row.append(f"{getcolor(color2, True)}▂▂")
                 else:
                     row.append("  ")
@@ -190,19 +164,19 @@ def daychart(color1, color2):
     if timestamps:
         daily_counts = days_of_week
         max_count = max(daily_counts.values()) if daily_counts else 1
-        scalar = max_count/10
+        scalar = max_count / 10
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         print(f"\n{headercolor}Number of commands run on each day (bar chart):\n")
-        for height in range(round(max_count/scalar), 0, -1):
+        for height in range(round(max_count / scalar), 0, -1):
             row = []
             for day in days:
-                if daily_counts.get(day, 0)/scalar >= height:
+                if daily_counts.get(day, 0) / scalar >= height:
                     row.append(f"{getcolor(color2, True)}███████")
-                elif daily_counts.get(day, 0)/scalar >= height-0.25:
+                elif daily_counts.get(day, 0) / scalar >= height - 0.25:
                     row.append(f"{getcolor(color2, True)}▆▆▆▆▆▆▆")
-                elif daily_counts.get(day, 0)/scalar >= height-0.5:
+                elif daily_counts.get(day, 0) / scalar >= height - 0.5:
                     row.append(f"{getcolor(color2, True)}▄▄▄▄▄▄▄")
-                elif daily_counts.get(day, 0)/scalar >= height-0.75:
+                elif daily_counts.get(day, 0) / scalar >= height - 0.75:
                     row.append(f"{getcolor(color2, True)}▂▂▂▂▂▂▂")
                 else:
                     row.append("       ")
