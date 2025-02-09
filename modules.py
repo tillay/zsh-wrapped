@@ -137,8 +137,6 @@ def top_pings(top_n, color):
         filtered_args = [arg for arg in args_by_cmd["ping"] if re.search(r'\b\d{3}\b', arg) is None and '.' in arg]
         if filtered_args:
             print_stats(f"Top {top_n} pinged IPs", Counter(filtered_args).most_common(top_n), color, "green", "used")
-        else:
-            print(f"\n{headercolor}No valid ping arguments found after filtering.")
 
 def barchart(color1, color2):
     if timestamps:
