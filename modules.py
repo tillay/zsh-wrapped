@@ -2,10 +2,8 @@ import sys, os, datetime, re
 from pathlib import Path
 from collections import Counter
 
-# Get current shell
 shell = os.popen(f"ps -p {os.getppid()} -o comm=").read().strip()
 
-# Locate the user's history file based on shell type
 HIST_FILE = Path.home() / (
     ".bash_history" if shell == "bash"
     else ".local/share/fish/fish_history" if shell == "fish"
@@ -15,14 +13,12 @@ HIST_FILE = Path.home() / (
 if not HIST_FILE.exists():
     sys.exit("No history file found.")
 
-# Read the history file and store its contents
 with HIST_FILE.open('r', encoding='utf-8', errors='ignore') as hist:
     lines = hist.readlines()
 
 commands, first_words, timestamps, days_of_week = [], [], [], Counter()
 args_by_cmd = {}
 
-# Parse history file based on shell type
 for line in lines:
     line = line.strip()
     if not line:
@@ -31,7 +27,7 @@ for line in lines:
     if shell == "fish":
         if line.startswith("- cmd:"):
             cmd = line.split("cmd: ")[1].strip()
-            first_word, *args = cmd.split()
+            first_word, *args = cmd.split() if cmd else (None, [])
             args = " ".join(args)
         elif line.startswith("when:"):
             timestamp = int(line.split("when: ")[1].strip())
@@ -53,7 +49,7 @@ for line in lines:
             command = parts[1] if len(parts) > 1 else ""
         else:
             command = line
-        first_word, *args = command.split()
+        first_word, *args = command.split() if command else (None, [])
         args = " ".join(args)
 
     if not first_word:
@@ -68,7 +64,6 @@ for line in lines:
 
 total_commands = len(first_words)
 
-# Function to get color codes for terminal output
 def getcolor(name, bold):
     colors = {"black": 30, "dark_red": 31, "green": 32, "dark_yellow": 33, "dark_blue": 34,
               "purple": 35, "teal": 36, "light_gray": 37, "dark_gray": 90, "red": 91,
@@ -79,18 +74,18 @@ def setheadercolor(color):
     global headercolor
     headercolor = getcolor(color, True)
 
-# Function to print statistics (e.g., top commands or arguments used)
 def print_stats(title, data, color1, color2, action):
     if not data:
         return
     print(f"\n{headercolor}{title}:")
     for i, (item, count) in enumerate(data, 1):
-        print(f"{getcolor('blue', False)}{i}: {getcolor(color1, False)}{item} {getcolor('blue', False)}{action} {getcolor(color2, True)}{count} {"times" if count > 1 else "time"}")
+        print(
+            f"{getcolor('blue', False)}{i}: {getcolor(color1, False)}{item} {getcolor('blue', False)}{action} {getcolor(color2, True)}{count} {'times' if count > 1 else 'time'}")
 
-# Function to display the most used arguments for a specific command
 def mostargs(command, top_n, color):
     if command in args_by_cmd and args_by_cmd[command]:
         print_stats(f"Top {top_n} {command} arguments", Counter(args_by_cmd[command]).most_common(top_n), color, "green", "used")
+
 def topcmds(num, color1, color2):
     print_stats(f"Top {num} used commands", Counter(first_words).most_common(num), color1, color2, "used")
 
@@ -106,10 +101,8 @@ def percentage(command, color):
         percentage_value = (command_count / total_commands) * 100
         print(f"\n{headercolor}Percentage of commands that are {command}: {getcolor(color, False)}{percentage_value:.2f}%")
 
-# Convert timestamps to hours and store in 'times' list
 times = [datetime.datetime.fromtimestamp(ts).hour for ts in timestamps]
 
-# Function to display the time of the first command run
 def firstcommand(color1, color2):
     if timestamps:
         first_command_time = datetime.datetime.fromtimestamp(timestamps[0]).strftime('%H:%M:%S on %m/%d/%y')
@@ -120,7 +113,6 @@ def firstcommand(color1, color2):
 def reset():
     print(getcolor("white", False))
 
-# Function to display the number of commands run at each hour of the day
 def hourly(color1, color2):
     if timestamps:
         hourly_counts = Counter(times)
@@ -183,7 +175,6 @@ def daychart(color1, color2):
             print(" ".join(row))
         print(f"{getcolor(color1, False)}" + " ".join(f"  {day[:3]}  " for day in days))
 
-# Function to display the number of commands run on each day of the week
 def byweekday(color1, color2):
     if timestamps:
         print(f"\n{headercolor}Number of commands run by day:")
