@@ -28,7 +28,7 @@ for line in lines:
         if line.startswith("- cmd:"):
             cmd = line.split("cmd: ")[1].strip()
             first_word, *args = cmd.split() if cmd else (None, [])
-            args = " ".join(args)
+            args = " ".join(args) if args else ""  # Ensure args is a string
         elif line.startswith("when:"):
             timestamp = int(line.split("when: ")[1].strip())
             timestamps.append(timestamp)
@@ -50,7 +50,7 @@ for line in lines:
         else:
             command = line
         first_word, *args = command.split() if command else (None, [])
-        args = " ".join(args)
+        args = " ".join(args) if args else ""
 
     if not first_word:
         continue
