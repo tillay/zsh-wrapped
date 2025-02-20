@@ -27,8 +27,9 @@ for line in lines:
     if shell == "fish":
         if line.startswith("- cmd:"):
             cmd = line.split("cmd: ")[1].strip()
-            first_word, *args = cmd.split() if cmd else (None, [])
-            args = " ".join(args) if args else ""  # Ensure args is a string
+            split_cmd = cmd.split()
+            first_word = split_cmd[0] if split_cmd else None
+            args = " ".join(split_cmd[1:]) if len(split_cmd) > 1 else ""  # Ensure args is a string
         elif line.startswith("when:"):
             timestamp = int(line.split("when: ")[1].strip())
             timestamps.append(timestamp)
@@ -49,8 +50,9 @@ for line in lines:
             command = parts[1] if len(parts) > 1 else ""
         else:
             command = line
-        first_word, *args = command.split() if command else (None, [])
-        args = " ".join(args) if args else ""
+        split_command = command.split()
+        first_word = split_command[0] if split_command else None
+        args = " ".join(split_command[1:]) if len(split_command) > 1 else ""  # Ensure args is a string
 
     if not first_word:
         continue
