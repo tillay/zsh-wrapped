@@ -106,6 +106,10 @@ def percentage(command, color):
 times = [datetime.datetime.fromtimestamp(ts).hour for ts in timestamps]
 
 def firstcommand(color1, color2):
+    if not commands:
+        print(f"\n{headercolor}No commands found in history.")
+        return
+
     if timestamps:
         first_command_time = datetime.datetime.fromtimestamp(timestamps[0]).strftime('%H:%M:%S on %m/%d/%y')
         print(f"\n{headercolor}First command run at {getcolor(color1, False)}{first_command_time}: {getcolor(color2, False)}{commands[0]}")
