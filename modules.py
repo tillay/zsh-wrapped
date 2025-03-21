@@ -90,7 +90,19 @@ def print_stats(title, data, color1, color2, action):
         return
     print(f"\n{headercolor}{title}:")
     for i, (item, count) in enumerate(data, 1):
-        print(f"{getcolor('blue', False)}{i}: {getcolor(color1, False)}{item} {getcolor('blue', False)}{action} {getcolor(color2, True)}{count} {"times" if count > 1 else "time"}")
+        print(f"{getcolor('blue', False)}{i}: {getcolor(color1, False)}{item} {getcolor('blue', False)}{action} {getcolor(color2, True)}{count} {'times' if count > 1 else 'time'}")
+# Function to get the package manager - works on debian and arch
+# Then takes that package manager and runs the proper command to see manually installed packages
+# Only arch support exists as of now so serves more of a check more than anything
+def get_manager():
+    with open("/etc/os-release") as f:
+        data = f.read()
+    if "ID_LIKE=arch" in data or "ID=arch" in data:
+        return "pacman"
+    elif "ID_LIKE=debian" in data or "ID=debian" in data:
+       return "apt"
+    else:
+        return ""
 
 # Function to display the most used arguments for a specific command
 def mostargs(command, top_n, color):
@@ -202,46 +214,55 @@ def byweekday(color1, color2):
 # Function to get all packages that have been installed manually in the shell using pacman
 # Takes all attempted installation commands and checks them against packages currently on the system
 def pacman_pkgs(color):
-    pkgs = []
-    max_len = 0
-    qe_pkgs = subprocess.run("pacman -Qe", shell=True, capture_output=True, text=True)
-    qe_pkgs = qe_pkgs.stdout.splitlines()
-    for i in range(len(qe_pkgs)):
-        qe_pkgs[i] = qe_pkgs[i].split()[0]
-    for i in range(len(args_by_cmd["sudo"])):
-        if args_by_cmd["sudo"][i].startswith("pacman -S "):
-            pkg = args_by_cmd["sudo"][i].split()
-            if len(pkg[2]) > max_len: max_len = len(pkg[2])
-            if pkg[2] in qe_pkgs:
-                pkgs.append(pkg[2])
-    pkgs = list(set(pkgs))
-    print(f"\n{headercolor}Packages installed using pacman:")
-    for i in range(0, len(pkgs), 2):
-        pkg1 = pkgs[i]
-        pkg2 = pkgs[i + 1] if i + 1 < len(pkgs) else ""
-        print(f"{getcolor(color, False)}{pkg1}{" "* (max_len - len(pkg1) + 2)}{getcolor(color, False)}{pkg2}")
+    try:
+        pkgs = []
+        max_len = 0
+        qe_pkgs = subprocess.run("pacman -Qe", shell=True, capture_output=True, text=True)
+        if qe_pkgs and get_manager() == "pacman":
+            qe_pkgs = qe_pkgs.stdout.splitlines()
+            for i in range(len(qe_pkgs)):
+                qe_pkgs[i] = qe_pkgs[i].split()[0]
+            for i in range(len(args_by_cmd["sudo"])):
+                if args_by_cmd["sudo"][i].startswith("pacman -S ") or args_by_cmd["sudo"][i].startswith("apt install "):
+                    pkg = args_by_cmd["sudo"][i].split()
+                    pkg_name = pkg[2] if pkg[0] == "pacman" else pkg[1]
+                    if len(pkg_name) > max_len:
+                        max_len = len(pkg_name)
+                    if pkg_name in qe_pkgs:
+                        pkgs.append(pkg_name)
+            pkgs = list(set(pkgs))
+            print(f"\n{headercolor}Packages installed using package manager:")
+            for i in range(0, len(pkgs), 2):
+                pkg1 = pkgs[i]
+                pkg2 = pkgs[i + 1] if i + 1 < len(pkgs) else ""
+                print(f"{getcolor(color, False)}{pkg1}{' ' * (max_len - len(pkg1) + 2)}{getcolor(color, False)}{pkg2}")
+    except KeyError:
+        pass
 
 # Function to get all packages that have been installed manually in the shell
 # This one works for non-sudo aur helpers (paru or yay)
 def aur_pkgs(man, color):
-    pkgs = []
-    max_len = 0
-    qe_pkgs = subprocess.run(f"{man} -Qe", shell=True, capture_output=True, text=True)
-    qe_pkgs = qe_pkgs.stdout.splitlines()
-    for i in range(len(qe_pkgs)):
-        qe_pkgs[i] = qe_pkgs[i].split()[0]
-    for i in range(len(args_by_cmd[man])):
-        if args_by_cmd[man][i].startswith("-S "):
-            pkg = args_by_cmd[man][i].split()
-            if pkg[1] in qe_pkgs:
-                if len(pkg[1]) > max_len: max_len = len(pkg[1])
-                pkgs.append(pkg[1])
-    pkgs = list(set(pkgs))
-    print(f"\n{headercolor}Packages installed using {man}:")
-    for i in range(0, len(pkgs), 2):
-        pkg1 = pkgs[i]
-        pkg2 = pkgs[i + 1] if i + 1 < len(pkgs) else ""
-        print(f"{getcolor(color, False)}{pkg1}{" "* (max_len - len(pkg1) +2)}{getcolor(color, False)}{pkg2}")
+    try:
+        pkgs = []
+        max_len = 0
+        qe_pkgs = subprocess.run(f"{man} -Qe", shell=True, capture_output=True, text=True)
+        qe_pkgs = qe_pkgs.stdout.splitlines()
+        for i in range(len(qe_pkgs)):
+            qe_pkgs[i] = qe_pkgs[i].split()[0]
+        for i in range(len(args_by_cmd[man])):
+            if args_by_cmd[man][i].startswith("-S "):
+                pkg = args_by_cmd[man][i].split()
+                if pkg[1] in qe_pkgs:
+                    if len(pkg[1]) > max_len: max_len = len(pkg[1])
+                    pkgs.append(pkg[1])
+        pkgs = list(set(pkgs))
+        print(f"\n{headercolor}Packages installed using {man}:")
+        for i in range(0, len(pkgs), 2):
+            pkg1 = pkgs[i]
+            pkg2 = pkgs[i + 1] if i + 1 < len(pkgs) else ""
+            print(f"{getcolor(color, False)}{pkg1}{' ' * (max_len - len(pkg1) + 2)}{getcolor(color, False)}{pkg2}")
+    except KeyError:
+        pass
 
 # If someone tries to run this just run wrapped.py
 if __name__ == "__main__":
