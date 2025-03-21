@@ -1,4 +1,4 @@
-import sys, os, datetime, re
+import sys, os, datetime, re, subprocess
 from pathlib import Path
 from collections import Counter
 
@@ -67,6 +67,7 @@ times = [datetime.datetime.fromtimestamp(ts).hour for ts in timestamps]
 # args_by_cmd is a list of the arguments of every binary run after the command that ran it
 # days_of_week is a list of each day of the week and how many commands have been run on that day
 # Note that timestamps and times are only returned if the detected shell is ZSH or FISH
+
 
 # Function to get color codes for terminal output
 # Has a problem with some terminals where some colors don't show properly - idk how to fix
@@ -197,3 +198,51 @@ def byweekday(color1, color2):
         print(f"\n{headercolor}Number of commands run by day:")
         for day, count in days_of_week.items():
             print(f"{getcolor(color1, False)}{day}: {getcolor(color2, False)}{count}")
+
+# Function to get all packages that have been installed manually in the shell using pacman
+# Takes all attempted installation commands and checks them against packages currently on the system
+def pacman_pkgs(color):
+    pkgs = []
+    max_len = 0
+    qe_pkgs = subprocess.run("pacman -Qe", shell=True, capture_output=True, text=True)
+    qe_pkgs = qe_pkgs.stdout.splitlines()
+    for i in range(len(qe_pkgs)):
+        qe_pkgs[i] = qe_pkgs[i].split()[0]
+    for i in range(len(args_by_cmd["sudo"])):
+        if args_by_cmd["sudo"][i].startswith("pacman -S "):
+            pkg = args_by_cmd["sudo"][i].split()
+            if len(pkg[2]) > max_len: max_len = len(pkg[2])
+            if pkg[2] in qe_pkgs:
+                pkgs.append(pkg[2])
+    pkgs = list(set(pkgs))
+    print(f"\n{headercolor}Packages installed using pacman:")
+    for i in range(0, len(pkgs), 2):
+        pkg1 = pkgs[i]
+        pkg2 = pkgs[i + 1] if i + 1 < len(pkgs) else ""
+        print(f"{getcolor(color, False)}{pkg1}{" "* (max_len - len(pkg1) + 2)}{getcolor(color, False)}{pkg2}")
+
+# Function to get all packages that have been installed manually in the shell
+# This one works for non-sudo aur helpers (paru or yay)
+def aur_pkgs(man, color):
+    pkgs = []
+    max_len = 0
+    qe_pkgs = subprocess.run(f"{man} -Qe", shell=True, capture_output=True, text=True)
+    qe_pkgs = qe_pkgs.stdout.splitlines()
+    for i in range(len(qe_pkgs)):
+        qe_pkgs[i] = qe_pkgs[i].split()[0]
+    for i in range(len(args_by_cmd[man])):
+        if args_by_cmd[man][i].startswith("-S "):
+            pkg = args_by_cmd[man][i].split()
+            if pkg[1] in qe_pkgs:
+                if len(pkg[1]) > max_len: max_len = len(pkg[1])
+                pkgs.append(pkg[1])
+    pkgs = list(set(pkgs))
+    print(f"\n{headercolor}Packages installed using {man}:")
+    for i in range(0, len(pkgs), 2):
+        pkg1 = pkgs[i]
+        pkg2 = pkgs[i + 1] if i + 1 < len(pkgs) else ""
+        print(f"{getcolor(color, False)}{pkg1}{" "* (max_len - len(pkg1) +2)}{getcolor(color, False)}{pkg2}")
+
+# If someone tries to run this just run wrapped.py
+if __name__ == "__main__":
+    os.system("python3 wrapped.py")
