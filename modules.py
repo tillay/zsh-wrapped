@@ -82,6 +82,18 @@ def setheadercolor(color):
     global headercolor
     headercolor = getcolor(color, True)
 
+# Function to get an array of installed packages
+def pkglist(commands, installed_pkgs, prefixes, name_index1, name_index2):
+    pkgs = []
+    for cmd in commands:
+        for prefix in prefixes:
+            if cmd.startswith(prefix):
+                parts = cmd.split()
+                pkg_name = parts[name_index1] if parts[0] == prefix.split()[0] else parts[name_index2]
+                if pkg_name in installed_pkgs:
+                    pkgs.append(pkg_name)
+    return list(set(pkgs))
+
 # Function to print statistics
 # feed it a header, data array, item color, number color, and action
 # spits out a list like 1: <item> <action> <number> times
@@ -91,6 +103,7 @@ def print_stats(title, data, color1, color2, action):
     print(f"\n{headercolor}{title}:")
     for i, (item, count) in enumerate(data, 1):
         print(f"{getcolor('blue', False)}{i}: {getcolor(color1, False)}{item} {getcolor('blue', False)}{action} {getcolor(color2, True)}{count} {'times' if count > 1 else 'time'}")
+
 # Function to get the package manager - works on debian and arch
 # Then takes that package manager and runs the proper command to see manually installed packages
 # Only arch support exists as of now so serves more of a check more than anything
@@ -216,21 +229,24 @@ def byweekday(color1, color2):
 def pacman_pkgs(color):
     try:
         pkgs = []
-        max_len = 0
-        qe_pkgs = subprocess.run("pacman -Qe", shell=True, capture_output=True, text=True)
-        if qe_pkgs and get_manager() == "pacman":
-            qe_pkgs = qe_pkgs.stdout.splitlines()
-            for i in range(len(qe_pkgs)):
-                qe_pkgs[i] = qe_pkgs[i].split()[0]
-            for i in range(len(args_by_cmd["sudo"])):
-                if args_by_cmd["sudo"][i].startswith("pacman -S ") or args_by_cmd["sudo"][i].startswith("apt install "):
-                    pkg = args_by_cmd["sudo"][i].split()
-                    pkg_name = pkg[2] if pkg[0] == "pacman" else pkg[1]
-                    if len(pkg_name) > max_len:
-                        max_len = len(pkg_name)
-                    if pkg_name in qe_pkgs:
-                        pkgs.append(pkg_name)
-            pkgs = list(set(pkgs))
+        manager = get_manager()
+        if manager == "pacman":
+            qe_pkgs_cmd = "pacman -Qe"
+        elif manager == "apt":
+            qe_pkgs_cmd = "apt-mark showmanual"
+        else:
+            return
+
+        qe_pkgs = subprocess.run(qe_pkgs_cmd, shell=True, capture_output=True, text=True)
+        if not qe_pkgs:
+            return
+        qe_pkgs = set(pkg.split()[0] for pkg in qe_pkgs.stdout.splitlines())
+        if manager == "pacman":
+            pkgs = pkglist(args_by_cmd["sudo"], qe_pkgs, ["pacman -S "], 2, 2)
+        elif manager == "apt":
+            pkgs = pkglist(args_by_cmd["sudo"], qe_pkgs, ["apt install ", "apt-get install "], 2, 2)
+        if pkgs:
+            max_len = max(len(pkg) for pkg in pkgs)
             print(f"\n{headercolor}Packages installed using package manager:")
             for i in range(0, len(pkgs), 2):
                 pkg1 = pkgs[i]
