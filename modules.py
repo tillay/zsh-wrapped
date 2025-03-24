@@ -247,7 +247,7 @@ def pacman_pkgs(color):
             pkgs = pkglist(args_by_cmd["sudo"], qe_pkgs, ["apt install ", "apt-get install "], 2, 2)
         if pkgs:
             max_len = max(len(pkg) for pkg in pkgs)
-            print(f"\n{headercolor}Packages installed using package manager:")
+            print(f"\n{headercolor}Packages installed using {manager}:")
             for i in range(0, len(pkgs), 2):
                 pkg1 = pkgs[i]
                 pkg2 = pkgs[i + 1] if i + 1 < len(pkgs) else ""
