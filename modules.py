@@ -110,9 +110,9 @@ def print_stats(title, data, color1, color2, action):
 def get_manager():
     with open("/etc/os-release") as f:
         data = f.read()
-    if "ID_LIKE=arch" in data or "ID=arch" in data:
+    if "arch" in data:
         return "pacman"
-    elif "ID_LIKE=debian" in data or "ID=debian" in data:
+    elif "debian" in data:
        return "apt"
     else:
         return ""
