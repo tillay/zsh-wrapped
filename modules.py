@@ -22,7 +22,7 @@ with HIST_FILE.open('r', encoding='utf-8', errors='ignore') as hist:
 
 # Below is a magic box of code that I hardly understand that parses all the command history
 # It takes the shell figured out earlier and parses the history file based on that shell to get some arrays
-# I wrote this box while high at 2am. I have no memory of writing it, but it works, so I am not touching it
+# I wrote this box while sleep derived at 2am. I have no memory of writing it, but it works, so I am not touching it
 # explanation of returned arrays below
 
 # MAGIC BOX STARTS HERE
