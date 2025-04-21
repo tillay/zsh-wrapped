@@ -32,6 +32,8 @@ for line in lines:
     if shell == "fish":
         if line.startswith("- cmd:"):
             cmd = line.split("cmd: ")[1].strip()
+            if not cmd:
+                continue
             first_word, *args = cmd.split()
             args = " ".join(args)
         elif line.startswith("when:"):
@@ -39,7 +41,8 @@ for line in lines:
             timestamps.append(timestamp)
             days_of_week[datetime.datetime.fromtimestamp(timestamp).strftime('%A')] += 1
             continue
-        else: continue
+        else:
+            continue
     else:
         if line.startswith(":"):
             parts = line.split(';', 1)
@@ -48,17 +51,27 @@ for line in lines:
                     timestamp = int(parts[0].split(':')[1])
                     timestamps.append(timestamp)
                     days_of_week[datetime.datetime.fromtimestamp(timestamp).strftime('%A')] += 1
-                except ValueError: continue
-            command = parts[1] if len(parts) > 1 else ""
-        else: command = line
+                except ValueError:
+                    continue
+            command = parts[1].strip() if len(parts) > 1 else ""
+        else:
+            command = line.strip()
+        if not command:
+            continue
         first_word, *args = command.split()
         args = " ".join(args)
-    if not first_word: continue
+
+    if not first_word:
+        continue
     first_words.append(first_word)
     commands.append(cmd if shell == "fish" else command)
-    if first_word not in args_by_cmd: args_by_cmd[first_word] = []
-    if args: args_by_cmd[first_word].append(args)
+    if first_word not in args_by_cmd:
+        args_by_cmd[first_word] = []
+    if args:
+        args_by_cmd[first_word].append(args)
+
 times = [datetime.datetime.fromtimestamp(ts).hour for ts in timestamps]
+
 # MAGIC BOX ENDS HERE
 
 # first_words is a list of every binary that has been run
