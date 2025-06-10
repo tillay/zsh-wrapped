@@ -5,7 +5,7 @@
 
 <h2>Requirements</h2>
 <ul>
-  <li>Shell: <code>zsh</code> or <code>fish</code> (timestamps required; Bash does not support this by default)</li>
+  <li>Shell: <code>zsh</code> or <code>fish</code> (Bash works, but time based modules will not appear)</li>
   <li>Compatible systems: Arch-based and Debian-based distributions (other distros may work with minor tweaks)</li>
 </ul>
 
