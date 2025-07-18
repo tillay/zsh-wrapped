@@ -1,4 +1,3 @@
-import re
 from parser import *
 
 # Function to get color codes for terminal output
@@ -35,21 +34,21 @@ def mostargs(command, top_n, color):
 
 # Function to return the top used binaries in a list by usages
 def topcmds(num, color1, color2):
-    print_stats(f"Top {num} used commands", Counter(first_words).most_common(num), color1, color2, "used")
+    print_stats(f"Top {num} used commands", Counter(binaries).most_common(num), color1, color2, "used")
 
 # Function to clear the terminal - only works on linux shells but this program literally is for linux shells - shouldn't be a problem
 def clear():
     os.system("clear")
 
 # Print the total number of commands run
-# Note that len(first_words) means total commands run
+# Note that len(binaries) means total commands run
 def printtotal(color):
-    print(f"{headercolor}Total commands: {getcolor(color, False)}{len(first_words)}")
+    print(f"{headercolor}Total commands: {getcolor(color, False)}{len(binaries)}")
 
 def percentage(command, color):
     command_count = sum(1 for cmd in commands if cmd.startswith(command + " ") or cmd == command)
-    if len(first_words) > 0:
-        percentage_value = (command_count / len(first_words)) * 100
+    if len(binaries) > 0:
+        percentage_value = (command_count / len(binaries)) * 100
         print(f"\n{headercolor}Percentage of commands that are {command}: {getcolor(color, False)}{percentage_value:.2f}%")
 
 # Function to display the time of the first command run
@@ -68,7 +67,7 @@ def reset():
 # Displays in a 2x12 list going from 0-12 on left and 12-23 on right
 def hourly(color1, color2):
     if timestamps:
-        hourly_counts = Counter(times)
+        hourly_counts = Counter(hours)
         print(f"\n{headercolor}Number of commands run at each hour of the day:")
         for hour in range(12):
             left_hour, right_hour = hour, hour + 12
@@ -116,7 +115,7 @@ def barchart(data, labels, color2, header, bar_width):
 # A visual representation of the data printed by the hourly() function
 def hourchart(color1, color2):
     if timestamps:
-        hourly_counts = Counter(times)
+        hourly_counts = Counter(hours)
         labels = range(24)
         barchart(hourly_counts, labels, color2, "Number of commands run at each hour of the day (bar chart)", 2)
         print(f"{getcolor(color1, False)}" + " ".join(f"{label:02d}" for label in labels))
