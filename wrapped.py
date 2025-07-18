@@ -1,5 +1,5 @@
 from modules import *
-from experiments import pacman_pkgs, aur_pkgs
+from experiments import system_pkgs, aur_pkgs
 
 setheadercolor("teal")
 clear()
@@ -16,6 +16,6 @@ hourly("green", "purple")
 byweekday("purple", "blue")
 hourchart("green", "purple")
 daychart("green", "yellow")
-pacman_pkgs("blue")
+system_pkgs("blue") # Changed from pacman_pkgs
 aur_pkgs("yay", "purple")
 reset()
