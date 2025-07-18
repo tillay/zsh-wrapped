@@ -1,4 +1,5 @@
 from parser import *
+import socket
 
 # Function to get color codes for terminal output
 # Has a problem with some terminals where some colors don't show properly - idk how to fix
@@ -83,10 +84,15 @@ def hourly(color1, color2):
 # You don't want those to be leaked when sharing your wrapped with others
 def top_pings(top_n, color):
     if "ping" in args_by_cmd and args_by_cmd["ping"]:
-        filtered_args = [arg for arg in args_by_cmd["ping"] if arg.count('.') != 3]
+        filtered_args = [arg if arg.count('.') != 3 else resolve_ip(arg) for arg in args_by_cmd["ping"]]
         if filtered_args:
             print_stats(f"Top {top_n} pinged IPs", Counter(filtered_args).most_common(top_n), color, "green", "used")
 
+def resolve_ip(ip):
+    try:
+        return socket.gethostbyaddr(ip)[0]
+    except:
+        return None
 
 # This is a function to make a barchart based on incoming data. Not used by itself but by other functions.
 # Currently, hourchart and daychart use this function.
