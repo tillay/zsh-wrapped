@@ -79,11 +79,10 @@ def hourly(color1, color2):
                 f"{getcolor(color1, False)}{right_hour:02d} - {getcolor(color2, False)}{right_count}")
 
 # Print the top pinged websites
-# Different from top args in the fact that it excludes ip addresses
-# You don't want those to be leaked when sharing your wrapped with others
-def top_pings(top_n, color):
+# Now includes a setting to hide raw IPs, that can be toggled
+def top_pings(top_n, color, hide_raw_ips):
     if "ping" in args_by_cmd and args_by_cmd["ping"]:
-        filtered_args = [arg for arg in args_by_cmd["ping"] if arg.count('.') != 3]
+        filtered_args = [arg for arg in args_by_cmd["ping"] if arg.count('.') != 3 or hide_raw_ips == False]
         if filtered_args:
             print_stats(f"Top {top_n} pinged IPs", Counter(filtered_args).most_common(top_n), color, "green", "used")
 

@@ -1,13 +1,8 @@
 import subprocess
-import sys
-import os
 from modules import *
 
 # Function to get the package manager - now works on Debian, Arch, and macOS (with Homebrew)
 def get_manager():
-    """
-    Identifies the system's primary package manager.
-    """
     if sys.platform == "darwin":  # macOS
         # Check for Homebrew on Apple Silicon or Intel paths
         if os.path.exists("/opt/homebrew/bin/brew") or os.path.exists("/usr/local/bin/brew"):
@@ -27,9 +22,6 @@ def get_manager():
 
 # Simplified function to get an array of installed packages from command history
 def pkglist(commands, installed_pkgs, prefixes, name_index):
-    """
-    Parses command history to find packages that were installed and are still present on the system.
-    """
     pkgs = []
     for cmd in commands:
         for prefix in prefixes:
@@ -43,10 +35,7 @@ def pkglist(commands, installed_pkgs, prefixes, name_index):
 
 # Function to get all packages that have been installed manually via system package manager
 def system_pkgs(color):
-    """
-    Finds packages installed via the system's native package manager (apt, pacman, brew)
-    by cross-referencing command history with currently installed packages.
-    """
+
     try:
         manager = get_manager()
         if not manager:
@@ -92,16 +81,12 @@ def system_pkgs(color):
                 print(f"{getcolor(color, False)}{pkg1}{' ' * (max_len - len(pkg1) + 2)}{getcolor(color, False)}{pkg2}")
 
     except (KeyError, FileNotFoundError):
-        # Gracefully fail if a command isn't in history or another file issue occurs.
         pass
 
 # Function to get all packages that have been installed manually in the shell
 # This one works for non-sudo aur helpers (paru or yay)
 def aur_pkgs(man, color):
-    """
-    Finds packages installed using an AUR helper (Arch Linux specific).
-    """
-    # This function is specific to Arch Linux AUR helpers, so we check the manager.
+    # This function is specific to Arch Linux AUR helpers, so check the manager.
     if get_manager() != "pacman":
         return
     try:

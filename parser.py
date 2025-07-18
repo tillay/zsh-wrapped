@@ -90,8 +90,3 @@ for cmd_str in commands:
     # Append arguments if they exist
     if len(parts) > 1:
         args_by_cmd[binary].append(" ".join(parts[1:]))
-
-# Example of how to see the output
-# print(f"Found {len(commands)} commands.")
-# print(f"Most common command: {Counter(binaries).most_common(1)}")
-# print(f"Most active day: {days_of_week.most_common(1)}")

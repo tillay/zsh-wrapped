@@ -22,6 +22,8 @@ To have time-based statistics, it needs either the ZSH or FISH shell - other she
 
 If you have a weird shell, try manually setting the shell variable to your shell if something goes wrong. 
 
+You can also remove the experimental modules if they cause problems with your system (modify wrapped.py).
+
 I've been working on an experimental feature to show packages that were installed through the command line. This feature only works on arch-based and debian-based distributions as of now. 
 
 Modify `wrapped.py` to configure the output. I made that file work like a config file so it shouldn't be too hard to those who don't know python. 
