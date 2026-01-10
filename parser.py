@@ -6,12 +6,19 @@ from collections import Counter
 # The .lstrip('-') is added to remove the leading hyphen from login shells (e.g., "-zsh" -> "zsh")
 shell = os.popen(f"ps -p {os.getppid()} -o comm=").read().strip().lstrip('-')
 
-# Locate the user's history file based on shell type using a lookup table
-HIST_FILE = Path.home() / (
-    ".zsh_history" if shell == "zsh"
-    else ".local/share/fish/fish_history" if shell == "fish"
-    else f".{shell}_history" # Assume that the history for jank shells is ~/.<shell>_history
+if shell == "zsh":
+    base_dir = Path(os.environ.get("ZDOTDIR", Path.home()))
+elif shell == "fish":
+    base_dir = Path.home() / ".local/share/fish"
+else:
+    base_dir = Path.home()
+
+HIST_FILE = (
+    base_dir / ".zsh_history" if shell == "zsh"
+    else base_dir / "fish_history" if shell == "fish"
+    else base_dir / f".{shell}_history"
 )
+
 # Exit with an error if that expected history file does not exist.
 if not HIST_FILE.exists():
     # Provide a more informative error message
